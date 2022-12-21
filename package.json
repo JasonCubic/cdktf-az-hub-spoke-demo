@@ -32,6 +32,8 @@
     "destroy:singleSubHubAndSpoke": "env-cmd cdktf destroy --auto-approve single-sub-hub-and-spoke",
     "test": "jest",
     "test:watch": "jest --watch",
+    "tfsec:cdktfDemo": "tfsec ./cdktf.out/stacks/cdktf-demo",
+    "tfsec:singleSubHubAndSpoke": "tfsec ./cdktf.out/stacks/single-sub-hub-and-spoke",
     "infracost": "cdktf synth && infracost breakdown --path ./cdktf.out"
   },
   "engines": {

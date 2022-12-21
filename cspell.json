@@ -16,6 +16,7 @@
     "Oidc",
     "Provisoner",
     "templatefile",
+    "tfsec",
     "unmocked",
     "vnet"
   ],
