@@ -1,0 +1,23 @@
+root: true
+env:
+  node: true
+extends:
+  - airbnb-base
+  - airbnb-typescript/base
+parserOptions:
+  project: ./tsconfig.json
+  ecmaVersion: 2020
+
+rules:
+  no-console: off
+  linebreak-style: off
+  max-len:
+    - warn
+    - code: 175
+
+  # Managed by TypeScript
+  import/extensions: off
+
+  # needed for the cdktf library
+  no-new: off
+  no-template-curly-in-string: off

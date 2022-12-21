@@ -1,0 +1,12 @@
+{
+  "language": "typescript",
+  "app": "npm run build && node ./dist/index.js",
+  "projectId": "9a41cfdf-3e81-414b-8587-b92be53c9096",
+  "sendCrashReports": "true",
+  "terraformProviders": [],
+  "terraformModules": [],
+  "context": {
+    "excludeStackIdFromLogicalIds": "true",
+    "allowSepCharsInLogicalIds": "true"
+  }
+}
