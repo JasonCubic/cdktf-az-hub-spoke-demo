@@ -13,6 +13,8 @@ interface PeerOptions {
   allowGatewayTransit?: boolean
 }
 
+// By the peering being in it's own stack its state gets tracked separately.
+// This has the tradeoff that the hub and stack not quite so tightly coupled, but it add more state to track.
 class PeerHubDemoAndSpokeDemo extends TerraformStack {
   private hubProvider: AzureOidcProvider;
 
@@ -23,14 +25,16 @@ class PeerHubDemoAndSpokeDemo extends TerraformStack {
 
     // tenantId and clientId are not secret so can be in a plain json file in the repo
     const tenantId = new TerraformVariable(this, 'tenantId', { type: 'string' }); // process.env.TF_VAR_tenantId
-    const clientId = new TerraformVariable(this, 'netContribClientId', { type: 'string' }); // process.env.TF_VAR_netContribClientId
+    const hubClientId = new TerraformVariable(this, 'hubClientId', { type: 'string' }); // process.env.TF_VAR_hubClientId
+    const spokeClientId = new TerraformVariable(this, 'spokeClientId', { type: 'string' }); // process.env.TF_VAR_clientId
 
     // subscriptionId is not publicly available but it is tokenized.  Can be in plain text as long as the repo is not public (not available on the internet)
     const hubSubscriptionId = new TerraformVariable(this, 'hubSubscriptionId', { type: 'string' }); // process.env.TF_VAR_hubSubscriptionId
     const spokeSubscriptionId = new TerraformVariable(this, 'spokeSubscriptionId', { type: 'string' }); // process.env.TF_VAR_spokeSubscriptionId
 
     // clientSecret is a secret and can not appear in the repo
-    const clientSecret = new TerraformVariable(this, 'netContribClientSecret', { type: 'string', sensitive: true }); // process.env.TF_VAR_netContribClientSecret
+    const hubClientSecret = new TerraformVariable(this, 'hubClientSecret', { type: 'string', sensitive: true }); // process.env.TF_VAR_hubClientSecret
+    const spokeClientSecret = new TerraformVariable(this, 'spokeClientSecret', { type: 'string', sensitive: true }); // process.env.TF_VAR_spokeClientSecret
 
     this.hubProvider = new AzureOidcProvider(this, 'hub-azure-provider', {
       useOidc: true,
@@ -38,8 +42,8 @@ class PeerHubDemoAndSpokeDemo extends TerraformStack {
       tenantId: tenantId.stringValue,
       subscriptionId: hubSubscriptionId.stringValue,
       // NOTE: the client used has to have the rights to create VirtualNetworkPeering in both the hub and spoke subscriptions
-      clientId: clientId.stringValue, // this service principal has network contributor on both the hub and spoke subscriptions
-      clientSecret: clientSecret.stringValue,
+      clientId: hubClientId.stringValue,
+      clientSecret: hubClientSecret.stringValue,
       features: {},
     });
 
@@ -49,12 +53,14 @@ class PeerHubDemoAndSpokeDemo extends TerraformStack {
       tenantId: tenantId.stringValue,
       subscriptionId: spokeSubscriptionId.stringValue,
       // NOTE: the client used has to have the rights to create VirtualNetworkPeering in both the hub and spoke subscriptions
-      clientId: clientId.stringValue, // this service principal has network contributor on both the hub and spoke subscriptions
-      clientSecret: clientSecret.stringValue,
+      clientId: spokeClientId.stringValue,
+      clientSecret: spokeClientSecret.stringValue,
       features: {},
     });
   }
 
+  // Note that this has to be manually called from: src\index.ts or else the terraform stack is empty.
+  // At this point in time, this is the case for cross stack dependencies.
   addVirtualNetworkPeering(params: PeerOptions) {
     const {
       hub,

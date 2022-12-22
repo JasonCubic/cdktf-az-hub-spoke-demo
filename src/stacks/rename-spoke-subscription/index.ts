@@ -30,6 +30,9 @@ class SubRenameStack extends TerraformStack {
       subscriptionId: subscriptionId.stringValue,
       subscriptionName: 'subscription-spoke-demo',
       // alias: 'Pay-As-You-Go',
+      lifecycle: {
+        preventDestroy: true,
+      },
     });
   }
 }

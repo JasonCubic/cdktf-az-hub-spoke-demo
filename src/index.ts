@@ -5,7 +5,7 @@ import { App, TerraformStack } from 'cdktf';
 import currentDir from './utils/current-dir.js';
 import fileExists from './utils/file-exists.js';
 
-// for dev-time convenience (cross-stack typescript typing in the peering function)
+// for dev time type hints (cross-stack typing in the addCrossStackResources function)
 import PeerHubDemoAndSpokeDemo from './stacks/peer-hub-demo-and-spoke-demo/index.js';
 import HubDemoStack from './stacks/hub-demo/index.js';
 import SpokeDemoStack from './stacks/spoke-demo/index.js';

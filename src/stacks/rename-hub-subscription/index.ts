@@ -30,6 +30,9 @@ class SubRenameStack extends TerraformStack {
       subscriptionId: subscriptionId.stringValue,
       subscriptionName: 'subscription-hub-demo',
       // alias: 'Azure Subscription 1',
+      lifecycle: {
+        preventDestroy: true,
+      },
     });
   }
 }

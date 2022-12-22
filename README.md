@@ -170,3 +170,7 @@ note:
 4340-afb6-f7a5f510008c`
 3. You will have to copy and paste the tfvars values in
 4. If the import succeeded then the state should appear in the correct place for CDKTF
+
+---
+
+docker run --rm -it -v "./cdktf.out/stacks/single-sub-hub-and-spoke:/data" ghcr.io/terraform-linters/tflint-bundle --enable-plugin=azurerm
