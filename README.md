@@ -133,7 +133,7 @@ Prerequisites:
 - [Terraform CLI](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
 - [Nodejs](https://nodejs.org/en/)
 
-Install Instrucstions:
+Install Instructions:
 
 - You can then install CDKTF from the command line: `npm install --global cdktf-cli`
 - To verify it is installed run: `cdktf --help` and/or `cdktf --version`
@@ -174,3 +174,13 @@ note:
 ---
 
 docker run --rm -it -v "./cdktf.out/stacks/single-sub-hub-and-spoke:/data" ghcr.io/terraform-linters/tflint-bundle --enable-plugin=azurerm
+
+---
+
+## nektos/act enables you to run GitHub Actions locally
+
+[act](https://github.com/nektos/act) makes GitHub Action development faster by letting you run workflows locally.
+
+Environment variables are pulled from `.env` by default.
+
+Note: During testing act works with podman version 4.3.1 on windows 11 22H2

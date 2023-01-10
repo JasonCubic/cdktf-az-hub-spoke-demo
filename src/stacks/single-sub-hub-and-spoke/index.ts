@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
-import { TerraformStack, TerraformVariable } from 'cdktf';
-import AzureOidcProvider from '../../constructs/L1-azurerm-oidc-provider/index.js';
+import { LocalBackend, TerraformStack, TerraformVariable } from 'cdktf';
+import AzurermOidcProvider from '../../constructs/L1-azurerm-oidc-provider/index.js';
 import MicrosoftLearnHubSpokeTopology from '../../constructs/L3-microsoft-learn-hub-spoke-topology/index.js';
 
 // Inspired by: https://learn.microsoft.com/en-us/azure/developer/terraform/hub-spoke-introduction
@@ -9,6 +9,7 @@ import MicrosoftLearnHubSpokeTopology from '../../constructs/L3-microsoft-learn-
 class MyStack extends TerraformStack {
   constructor(scope: Construct, id: string) {
     super(scope, id);
+    new LocalBackend(this);
 
     // tenantId and clientId are not secret so can be in a plain json file in the repo
     const tenantId = new TerraformVariable(this, 'tenantId', { type: 'string' }); // process.env.TF_VAR_tenantId
@@ -23,7 +24,7 @@ class MyStack extends TerraformStack {
     // NOTE: It is a best practice to only use TerraformVariable in stacks.
     // https://developer.hashicorp.com/terraform/cdktf/create-and-deploy/best-practices#read-secrets-with-terraform-variables
 
-    new AzureOidcProvider(this, 'azure-provider', {
+    new AzurermOidcProvider(this, 'azure-provider', {
       useOidc: true,
       tenantId: tenantId.stringValue,
       subscriptionId: subscriptionId.stringValue,
@@ -36,7 +37,8 @@ class MyStack extends TerraformStack {
     const vmAdminPassword = new TerraformVariable(this, 'vmAdminPassword', { type: 'string', sensitive: true }); // process.env.TF_VAR_vmAdminPassword
 
     new MicrosoftLearnHubSpokeTopology(this, 'hub-and-spoke-topology', {
-      region: 'East US',
+      // region: 'East US',
+      region: 'eastus',
       adminUsername: vmAdminUsername.stringValue,
       adminPassword: vmAdminPassword.stringValue,
     });

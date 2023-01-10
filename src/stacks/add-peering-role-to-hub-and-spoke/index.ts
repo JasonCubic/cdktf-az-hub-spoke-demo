@@ -1,12 +1,13 @@
 import { Construct } from 'constructs';
-import { TerraformStack, TerraformVariable } from 'cdktf';
+import { LocalBackend, TerraformStack, TerraformVariable } from 'cdktf';
 import { RoleAssignment } from '@cdktf/provider-azurerm/lib/role-assignment/index.js';
 import { DataAzurermSubscription } from '@cdktf/provider-azurerm/lib/data-azurerm-subscription/index.js';
 import { RoleDefinition } from '@cdktf/provider-azurerm/lib/role-definition/index.js';
 import { DataAzurermClientConfig } from '@cdktf/provider-azurerm/lib/data-azurerm-client-config/index.js';
-import AzureOidcProvider from '../../constructs/L1-azurerm-oidc-provider/index.js';
+import AzurermOidcProvider from '../../constructs/L1-azurerm-oidc-provider/index.js';
+import StackMap from '../../stack-map-type.js';
 
-// this is an experiment / proof of concept
+// PeerHubDemoAndSpokeDemo is an experiment / proof of concept
 // this could be used to do peering with no extra long term service principals (SP)
 // if you wanted to peer two virtual networks in different subscriptions
 // it would look kind of like this in a ci/cd pipeline
@@ -20,6 +21,7 @@ import AzureOidcProvider from '../../constructs/L1-azurerm-oidc-provider/index.j
 class PeerHubDemoAndSpokeDemo extends TerraformStack {
   constructor(scope: Construct, id: string) {
     super(scope, id);
+    new LocalBackend(this);
 
     // tenantId and clientId are not secret so can be in a plain json file in the repo
     const tenantId = new TerraformVariable(this, 'tenantId', { type: 'string' }); // process.env.TF_VAR_tenantId
@@ -34,7 +36,7 @@ class PeerHubDemoAndSpokeDemo extends TerraformStack {
     const hubClientSecret = new TerraformVariable(this, 'hubClientSecret', { type: 'string', sensitive: true }); // process.env.TF_VAR_hubClientSecret
     const spokeClientSecret = new TerraformVariable(this, 'spokeClientSecret', { type: 'string', sensitive: true }); // process.env.TF_VAR_spokeClientSecret
 
-    const hubProvider = new AzureOidcProvider(this, 'hub-azure-provider', {
+    const hubProvider = new AzurermOidcProvider(this, 'hub-azure-provider', {
       useOidc: true,
       alias: 'hub-azurerm-provider',
       tenantId: tenantId.stringValue,
@@ -44,7 +46,7 @@ class PeerHubDemoAndSpokeDemo extends TerraformStack {
       features: {},
     });
 
-    const spokeProvider = new AzureOidcProvider(this, 'spoke-azure-provider', {
+    const spokeProvider = new AzurermOidcProvider(this, 'spoke-azure-provider', {
       useOidc: true,
       alias: 'spoke-azurerm-provider',
       tenantId: tenantId.stringValue,
@@ -115,6 +117,15 @@ class PeerHubDemoAndSpokeDemo extends TerraformStack {
       skipServicePrincipalAadCheck: true, // without this the delete can take a long time
       provider: spokeProvider,
     });
+  }
+
+  // the preSynth hook is invoked in src\index.ts
+  // runs after all stacks have been instantiated and before the app.synth()
+  // the preSynth hook is intended to be the place to set cross-stack dependencies
+  preSynth(stacksObj: StackMap) {
+    this.addDependency(stacksObj['hub-demo']);
+    this.addDependency(stacksObj['spoke-demo']);
+    // Note: we might not need to make the hub and spoke dependencies explicit
   }
 }
 

@@ -1,0 +1,44 @@
+name: Synth the CDKTF Application on PRs
+
+on: [pull_request]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  synth-cdktf-on-pr:
+    name: Terraform CDK Synth
+    runs-on: ubuntu-latest
+
+    # https://developer.hashicorp.com/terraform/cdktf/create-and-deploy/environment-variables
+    # https://developer.hashicorp.com/terraform/cli/config/environment-variables
+    env:
+      TF_IN_AUTOMATION: 1
+      # TF_LOG: debug
+      # CDKTF_LOG_LEVEL: debug
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install node_modules
+        run: npm install
+
+      - name: Generate CDK Constructs for Terraform providers and modules
+        run: npx cdktf-cli get
+
+      # https://github.com/hashicorp/terraform-cdk-action
+      - name: Test the synth
+        uses: hashicorp/terraform-cdk-action@v0.1.7
+        with:
+          terraformVersion: 1.3.6
+          cdktfVersion: 0.14.3
+          mode: synth-only
+          commentOnPr: false
+          # githubToken: ${{ secrets.GITHUB_TOKEN }}

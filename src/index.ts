@@ -4,11 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { App, TerraformStack } from 'cdktf';
 import currentDir from './utils/current-dir.js';
 import fileExists from './utils/file-exists.js';
-
-// for dev time type hints (cross-stack typing in the addCrossStackResources function)
-import PeerHubDemoAndSpokeDemo from './stacks/peer-hub-demo-and-spoke-demo/index.js';
-import HubDemoStack from './stacks/hub-demo/index.js';
-import SpokeDemoStack from './stacks/spoke-demo/index.js';
+import StackMap from './stack-map-type.js';
 
 interface StackInfoObj {
   stackFilePathExists: boolean,
@@ -16,8 +12,6 @@ interface StackInfoObj {
   stackFileIndexPath: string,
   stackHandle?: TerraformStack,
 }
-
-type StackMap = { [key: string]: TerraformStack };
 
 // collects some more info about the folders in the stacks path
 async function getStackCollection(stackRootPath: string, stackFolders: string[]): Promise<StackInfoObj[]> {
@@ -66,17 +60,25 @@ async function addStacks(app: App): Promise<StackMap> {
   return transformStackCollectionToObj(stackCollection);
 }
 
+// This hook is so that stacks can handle cross stack references themselves.
+// It it can also be used for anything that needs to happen after all the
+// stacks have been instantiated and before the app.synth() is done.
+// The way it works is if a stack has a "preSynth" function then it gets called
+// and passes the stacksObj handle to the stack preSynth function
 // https://developer.hashicorp.com/terraform/cdktf/concepts/stacks#cross-stack-references
-function addCrossStackResources(stacksObj: StackMap): void {
-  (stacksObj['peer-hub-demo-and-spoke-demo'] as PeerHubDemoAndSpokeDemo).addVirtualNetworkPeering({
-    hub: (stacksObj['hub-demo'] as HubDemoStack),
-    spoke: (stacksObj['spoke-demo'] as SpokeDemoStack),
-  });
+async function triggerPreSynthHook(stacksObj: StackMap): Promise<void> {
+  await Promise.all(Object.keys(stacksObj).map(async (stackKeyName) => {
+    const stack = (stacksObj[stackKeyName] as any);
+    if (typeof (stack?.preSynth) === 'function') {
+      await stack.preSynth(stacksObj);
+    }
+  }));
 }
 
+// where the app starts executing
 (async () => {
   const app = new App();
   const stacksObj = await addStacks(app);
-  addCrossStackResources(stacksObj);
+  await triggerPreSynthHook(stacksObj);
   app.synth();
 })();

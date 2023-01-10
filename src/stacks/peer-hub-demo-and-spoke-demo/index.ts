@@ -1,27 +1,22 @@
 import { Construct } from 'constructs';
-import { TerraformStack, TerraformVariable } from 'cdktf';
+import { LocalBackend, TerraformStack, TerraformVariable } from 'cdktf';
 import { VirtualNetworkPeering } from '@cdktf/provider-azurerm/lib/virtual-network-peering/index.js';
-import AzureOidcProvider from '../../constructs/L1-azurerm-oidc-provider/index.js';
+import AzurermOidcProvider from '../../constructs/L1-azurerm-oidc-provider/index.js';
+
+// for dev time type hints (cross-stack typing in the preSynth hook function)
+import StackMap from '../../stack-map-type.js';
 import HubDemoStack from '../hub-demo/index.js';
 import SpokeDemoStack from '../spoke-demo/index.js';
 
-interface PeerOptions {
-  hub: HubDemoStack,
-  spoke: SpokeDemoStack,
-  allowVirtualNetworkAccess?: boolean,
-  allowForwardedTraffic?: boolean,
-  allowGatewayTransit?: boolean
-}
-
 // By the peering being in it's own stack its state gets tracked separately.
-// This has the tradeoff that the hub and stack not quite so tightly coupled, but it add more state to track.
 class PeerHubDemoAndSpokeDemo extends TerraformStack {
-  private hubProvider: AzureOidcProvider;
+  private hubProvider: AzurermOidcProvider;
 
-  private spokeProvider: AzureOidcProvider;
+  private spokeProvider: AzurermOidcProvider;
 
   constructor(scope: Construct, id: string) {
     super(scope, id);
+    new LocalBackend(this);
 
     // tenantId and clientId are not secret so can be in a plain json file in the repo
     const tenantId = new TerraformVariable(this, 'tenantId', { type: 'string' }); // process.env.TF_VAR_tenantId
@@ -36,7 +31,7 @@ class PeerHubDemoAndSpokeDemo extends TerraformStack {
     const hubClientSecret = new TerraformVariable(this, 'hubClientSecret', { type: 'string', sensitive: true }); // process.env.TF_VAR_hubClientSecret
     const spokeClientSecret = new TerraformVariable(this, 'spokeClientSecret', { type: 'string', sensitive: true }); // process.env.TF_VAR_spokeClientSecret
 
-    this.hubProvider = new AzureOidcProvider(this, 'hub-azure-provider', {
+    this.hubProvider = new AzurermOidcProvider(this, 'hub-azure-provider', {
       useOidc: true,
       alias: 'hub-azurerm-provider',
       tenantId: tenantId.stringValue,
@@ -47,7 +42,7 @@ class PeerHubDemoAndSpokeDemo extends TerraformStack {
       features: {},
     });
 
-    this.spokeProvider = new AzureOidcProvider(this, 'spoke-azure-provider', {
+    this.spokeProvider = new AzurermOidcProvider(this, 'spoke-azure-provider', {
       useOidc: true,
       alias: 'spoke-azurerm-provider',
       tenantId: tenantId.stringValue,
@@ -59,20 +54,21 @@ class PeerHubDemoAndSpokeDemo extends TerraformStack {
     });
   }
 
-  // Note that this has to be manually called from: src\index.ts or else the terraform stack is empty.
-  // At this point in time, this is the case for cross stack dependencies.
-  addVirtualNetworkPeering(params: PeerOptions) {
-    const {
-      hub,
-      spoke,
-      allowVirtualNetworkAccess = true,
-      allowForwardedTraffic = false,
-      allowGatewayTransit = false,
-    } = params;
+  // the preSynth hook is invoked in src\index.ts
+  // runs after all stacks have been instantiated and before the app.synth()
+  // the preSynth hook is intended to be the place to set cross-stack dependencies
+  preSynth(stacksObj: StackMap) {
+    const hub = (stacksObj['hub-demo'] as HubDemoStack);
+    const spoke = (stacksObj['spoke-demo'] as SpokeDemoStack);
+    const allowVirtualNetworkAccess = true; // default is true
+    const allowForwardedTraffic = false; // default is false
+    const allowGatewayTransit = false;
+
+    this.addDependency(stacksObj['add-peering-role-to-hub-and-spoke']); // peering fails to create without this being run first
 
     // https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_network_peering
     new VirtualNetworkPeering(this, 'peer-hub-vnet-to-spoke-vnet', {
-      name: 'peer-hub-vnet-to-spoke-vnet', // TODO: change this to a naming function
+      name: 'peer-hub-vnet-to-spoke-vnet',
       resourceGroupName: hub.simpleHub.hubRg.name,
       virtualNetworkName: hub.simpleHub.simpleHubVNet.vNet.name,
       remoteVirtualNetworkId: spoke.simpleSpoke.simpleSpokeVNet.vNet.id,
@@ -83,7 +79,7 @@ class PeerHubDemoAndSpokeDemo extends TerraformStack {
     });
 
     new VirtualNetworkPeering(this, 'peer-spoke-vnet-to-hub-vnet', {
-      name: 'peer-spoke-vnet-to-hub-vnet', // TODO: change this to a naming function
+      name: 'peer-spoke-vnet-to-hub-vnet',
       resourceGroupName: spoke.simpleSpoke.spokeRg.name,
       virtualNetworkName: spoke.simpleSpoke.simpleSpokeVNet.vNet.name,
       remoteVirtualNetworkId: hub.simpleHub.simpleHubVNet.vNet.id,

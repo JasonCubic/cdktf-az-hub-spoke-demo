@@ -1,11 +1,12 @@
 import { Construct } from 'constructs';
-import { TerraformStack, TerraformVariable } from 'cdktf';
-import AzureOidcProvider from '../../constructs/L1-azurerm-oidc-provider/index.js';
+import { LocalBackend, TerraformStack, TerraformVariable } from 'cdktf';
+import AzurermOidcProvider from '../../constructs/L1-azurerm-oidc-provider/index.js';
 import QuickDevEnv from '../../constructs/quick-dev-env/index.js';
 
 class MyStack extends TerraformStack {
   constructor(scope: Construct, id: string) {
     super(scope, id);
+    new LocalBackend(this);
 
     // tenantId and clientId are not secret so can be in a plain json file in the repo
     const tenantId = new TerraformVariable(this, 'tenantId', { type: 'string' }); // process.env.TF_VAR_tenantId
@@ -17,7 +18,7 @@ class MyStack extends TerraformStack {
     // clientSecret is a secret and can not appear in the repo
     const clientSecret = new TerraformVariable(this, 'clientSecret', { type: 'string', sensitive: true }); // process.env.TF_VAR_vmPassword
 
-    new AzureOidcProvider(this, 'azure-provider', {
+    new AzurermOidcProvider(this, 'azure-provider', {
       useOidc: true,
       tenantId: tenantId.stringValue,
       subscriptionId: subscriptionId.stringValue,
@@ -26,7 +27,8 @@ class MyStack extends TerraformStack {
       features: {},
     });
 
-    new QuickDevEnv(this, 'quick-dev-env', 'East US');
+    // new QuickDevEnv(this, 'quick-dev-env', 'East US');
+    new QuickDevEnv(this, 'quick-dev-env', 'eastus');
   }
 }
 

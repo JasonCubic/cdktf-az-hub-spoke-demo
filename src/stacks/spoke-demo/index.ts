@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
-import { TerraformStack, TerraformVariable } from 'cdktf';
-import AzureOidcProvider from '../../constructs/L1-azurerm-oidc-provider/index.js';
+import { LocalBackend, TerraformStack, TerraformVariable } from 'cdktf';
+import AzurermOidcProvider from '../../constructs/L1-azurerm-oidc-provider/index.js';
 import SimpleSpoke from '../../constructs/simple-spoke/index.js';
 
 class SpokeDemoStack extends TerraformStack {
@@ -8,6 +8,7 @@ class SpokeDemoStack extends TerraformStack {
 
   constructor(scope: Construct, id: string) {
     super(scope, id);
+    new LocalBackend(this);
 
     // tenantId and clientId are not secret so can be in a plain json file in the repo
     const tenantId = new TerraformVariable(this, 'tenantId', { type: 'string' }); // process.env.TF_VAR_tenantId
@@ -19,7 +20,7 @@ class SpokeDemoStack extends TerraformStack {
     // clientSecret is a secret and can not appear in the repo
     const clientSecret = new TerraformVariable(this, 'spokeClientSecret', { type: 'string', sensitive: true }); // process.env.TF_VAR_spokeClientSecret
 
-    new AzureOidcProvider(this, 'azure-provider', {
+    new AzurermOidcProvider(this, 'azure-provider', {
       useOidc: true,
       tenantId: tenantId.stringValue,
       subscriptionId: subscriptionId.stringValue,
@@ -29,7 +30,8 @@ class SpokeDemoStack extends TerraformStack {
     });
 
     this.simpleSpoke = new SimpleSpoke(this, 'simple-spoke-demo', {
-      region: 'East US',
+      // region: 'East US',
+      region: 'eastus',
       vNetAddressSpace: ['10.101.0.0/16'],
       subnetAddressPrefixes: ['10.101.1.0/24'],
     });
